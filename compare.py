@@ -3,41 +3,54 @@ import hashlib
 import argparse
 import pathlib
 import pytest
-from typing import Union
+from termcolor import colored
+from typing import Union, Self
+from dataclasses import dataclass
 
 
-def generate_hash(
-    file_path: Union[str, pathlib.Path], algorithm: str = "sha256"
-) -> str:
-    """
-    Generates a hash given the algorithm and file path.
-    """
-    ALGORITHMS = hashlib.algorithms_guaranteed
-    if not algorithm in ALGORITHMS:
-        raise ValueError(f"Must use supported hash algorithm: {ALGORITHMS}")
+@dataclass
+class Hasher:
+    DEFAULT_ALGORITHM = "sha256"
+    hash: str
+    algorithm: str = DEFAULT_ALGORITHM
 
-    # Read file contents
-    try:
-        with open(pathlib.Path(file_path).expanduser(), "rb") as file:
-            contents = file.read()
-    except FileNotFoundError as exception:
-        print(f"File not found: {file_path}")
-        raise
+    @classmethod
+    def generate_hash_from_file(
+        cls, file_path: Union[str, pathlib.Path], algorithm: str = DEFAULT_ALGORITHM
+    ) -> str:
+        """
+        Generates a hash given the algorithm and file path.
+        """
+        ALGORITHMS = hashlib.algorithms_guaranteed
+        if not algorithm in ALGORITHMS:
+            raise ValueError(f"Must use supported hash algorithm: {ALGORITHMS}")
 
-    if hasattr(hashlib, algorithm):
-        func = getattr(hashlib, algorithm)
-        result = func(contents)
-    else:
-        raise ValueError(f"Must use supported hash algorithm: {ALGORITHMS}")
+        # Read file contents
+        try:
+            with open(pathlib.Path(file_path).expanduser(), "rb") as file:
+                contents = file.read()
+        except FileNotFoundError as exception:
+            print(f"File not found: {file_path}")
+            raise
 
-    return result.hexdigest()
+        # Dynamically call hash algo given argument name.
+        if hasattr(hashlib, algorithm):
+            func = getattr(hashlib, algorithm)
+            result = func(contents).hexdigest()
+            hasher = cls(hash=result, algorithm=algorithm)
+        else:
+            raise ValueError(f"Must use supported hash algorithm: {ALGORITHMS}")
 
+        return hasher
 
-def sha_compare(original: str, test: str) -> bool:
-    """
-    Compares two shas and returns if they are equal or not.
-    """
-    return original == test
+    def __eq__(self, obj: Self) -> bool:
+        """
+        Compares two shas and returns if they are equal or not.
+        """
+        return self.hash == obj.hash
+
+    def __str__(self) -> str:
+        return f'"{self.hash}" [{self.algorithm}]'
 
 
 def test_sha_compare():
@@ -59,18 +72,23 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Compare two SHAs to see if they are equal."
     )
-    parser.add_argument("--sha256", dest="sha256", default=True)
+    parser.add_argument("-a", dest="algorithm", default=Hasher.DEFAULT_ALGORITHM)
     parser.add_argument("source", help="Source SHA")
     parser.add_argument("test", help="Test SHA")
     args = parser.parse_args()
 
-    source: str = args.source
-    test: str = args.test
-    result: bool = sha_compare(source, test)
+    algorithm = args.algorithm
+    source = Hasher(hash=args.source, algorithm=algorithm)
+    test = Hasher.generate_hash_from_file(args.test, algorithm=algorithm)
+    result = source == test
+    output: str = str(result).upper()
 
-    print(f"Comparing '{source}' to '{test}': {str(result).upper()}")
+    # Add color
+    color = "green" if result else "red"
+    output = colored(output, color, attrs=["bold"])
+
+    print(f"{source} == {test}: {output}")
 
 
 if __name__ == "__main__":
-    # main()
-    print(generate_hash("~/Desktop/path.txt", "sha256"))
+    main()
