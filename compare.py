@@ -1,4 +1,4 @@
-#!venv/bin/python
+#! venv/bin/python
 
 import hashlib
 import argparse
@@ -7,6 +7,7 @@ import pytest
 from termcolor import colored
 from typing import Union, Self
 from dataclasses import dataclass
+import pyperclip
 
 
 @dataclass
@@ -75,8 +76,10 @@ def main() -> None:
         description="Compare two SHAs to see if they are equal."
     )
     parser.add_argument("-a", dest="algorithm", default=Hasher.DEFAULT_ALGORITHM)
-    parser.add_argument("source", help="Source SHA")
     parser.add_argument("test", help="Test SHA")
+    parser.add_argument(
+        "source", help="Source SHA", nargs="?", default=pyperclip.paste()
+    )
     args = parser.parse_args()
 
     algorithm = args.algorithm
