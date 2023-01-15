@@ -1,4 +1,5 @@
-#! venv/python
+#!venv/bin/python
+
 import hashlib
 import argparse
 import pathlib
@@ -45,14 +46,15 @@ class Hasher:
 
     def __eq__(self, obj: Self) -> bool:
         """
-        Compares two shas and returns if they are equal or not.
+        Compares two hashes and returns if they are equal or not.
         """
         return self.hash == obj.hash
 
     def __str__(self) -> str:
-        return f'"{self.hash}" [{self.algorithm}]'
+        return self.hash
 
 
+# TODO: Update tests
 def test_sha_compare():
     original: str = ""
     test: str = ""
@@ -80,14 +82,17 @@ def main() -> None:
     algorithm = args.algorithm
     source = Hasher(hash=args.source, algorithm=algorithm)
     test = Hasher.generate_hash_from_file(args.test, algorithm=algorithm)
+
+    # Colorize output and print to terminal
     result = source == test
-    output: str = str(result).upper()
-
-    # Add color
     color = "green" if result else "red"
-    output = colored(output, color, attrs=["bold"])
 
-    print(f"{source} == {test}: {output}")
+    result: str = str(result).upper()
+    colored_result = colored(result, "black", f"on_{color}", attrs=["bold"])
+
+    output = colored(f"[{algorithm}] {source} == {test}: ", color) + colored_result
+
+    print(output)
 
 
 if __name__ == "__main__":
