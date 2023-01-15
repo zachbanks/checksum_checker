@@ -1,18 +1,20 @@
-#! venv/bin/python
-
 import hashlib
-import argparse
 import pathlib
 import pytest
 from termcolor import colored
-from typing import Union, Self
+from typing import Union, Self, Optional
 from dataclasses import dataclass
 import pyperclip
+import typer
+
+# TODO: Switch color output to use Rich
+# from rich import print
 
 
 @dataclass
 class Hasher:
     DEFAULT_ALGORITHM = "sha256"
+    ALGORITHMS = hashlib.algorithms_guaranteed
     hash: str
     algorithm: str = DEFAULT_ALGORITHM
 
@@ -23,9 +25,8 @@ class Hasher:
         """
         Generates a hash given the algorithm and file path.
         """
-        ALGORITHMS = hashlib.algorithms_guaranteed
-        if not algorithm in ALGORITHMS:
-            raise ValueError(f"Must use supported hash algorithm: {ALGORITHMS}")
+        if not algorithm in cls.ALGORITHMS:
+            raise ValueError(f"Must use supported hash algorithm: {cls.ALGORITHMS}")
 
         # Read file contents
         try:
@@ -41,7 +42,7 @@ class Hasher:
             result = func(contents).hexdigest()
             hasher = cls(hash=result, algorithm=algorithm)
         else:
-            raise ValueError(f"Must use supported hash algorithm: {ALGORITHMS}")
+            raise ValueError(f"Must use supported hash algorithm: {cls.ALGORITHMS}")
 
         return hasher
 
@@ -71,20 +72,34 @@ def test_generate_hash():
     assert generate_hash(path, "sha256")
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Compare two SHAs to see if they are equal."
-    )
-    parser.add_argument("-a", dest="algorithm", default=Hasher.DEFAULT_ALGORITHM)
-    parser.add_argument("test", help="Test SHA")
-    parser.add_argument(
-        "source", help="Source SHA", nargs="?", default=pyperclip.paste()
-    )
-    args = parser.parse_args()
+def main(
+    test: str = typer.Argument(
+        ...,
+        help="Provide file path of file to check against source.",
+        show_default=False,
+        metavar="Test File",
+    ),
+    source: str = typer.Argument(
+        pyperclip.paste(),
+        help="Provide source SHA to test against test file. If not provided, will use system clipboard contents.",
+        show_default="System clipboard contents",
+        metavar="Source Hash",
+    ),
+    algorithm: str = typer.Option(
+        Hasher.DEFAULT_ALGORITHM,
+        "--algorithm",
+        "-a",
+        help=f"Choose hash algorithm to use: {Hasher.ALGORITHMS}",
+    ),
+) -> None:
+    """
+    Generates hash value for a specified file and compares it against a known value.
+    Used to verify if software downloaded from internet has been maliciously modified
+    or is not from the original source.
+    """
 
-    algorithm = args.algorithm
-    source = Hasher(hash=args.source, algorithm=algorithm)
-    test = Hasher.generate_hash_from_file(args.test, algorithm=algorithm)
+    source = Hasher(hash=source, algorithm=algorithm)
+    test = Hasher.generate_hash_from_file(test, algorithm=algorithm)
 
     # Colorize output and print to terminal
     result = source == test
@@ -99,4 +114,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    typer.run(main)
