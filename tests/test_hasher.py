@@ -1,17 +1,31 @@
 import pytest
 from src.hasher import Hasher
 
-# TODO: Update tests
-def test_sha_compare():
-    original: str = ""
-    test: str = ""
-    assert sha_compare(original, test) == True
-
-    test = "x"
-    assert sha_compare(original, test) == False
+class TestHasher:
+    def test_init(self):
+        hasher = Hasher("1234")
+        assert hasher.hash == "1234"
+        assert hasher.algorithm != None
 
 
-def test_generate_hash():
-    # TODO: Figure out how to test this.
-    path = "somefilepath.txt"
-    assert generate_hash(path, "sha256")
+    def test_str(self):
+        h = Hasher("1234")
+        assert str(h) == "1234"
+
+
+    def test_eq(self):
+        h1 = Hasher("1234")
+        h2 = Hasher("1234")
+        h3= Hasher("12345")
+
+        assert h1 == h2
+        assert h1 != h3
+
+    
+    # TODO: Implement
+    def test_genenerate_from_file(self):
+        # Test raises exception if bad algo given.
+        # Test raises exception if bad file given.
+        # Test no errors given correct algos (whole list)
+        # Test generates correct checksum for given file.
+        # Tests returns checksum for given file.
